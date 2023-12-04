@@ -11,6 +11,9 @@ import os
 
 from datasets import KidneyDataset
 from models import UNet
+from torchvision.models.segmentation import deeplabv3_mobilenet_v3_large
+import segmentation_models_pytorch as smp
+
 
 def dice_loss(y_pred, y_true, smooth=1e-5):
     y_pred = torch.sigmoid(y_pred)
@@ -37,7 +40,13 @@ def main(args):
     train_set = KidneyDataset('train', transform=transform)
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
-    net = UNet(args.num_classes).to(device)
+    net = smp.Unet(
+        encoder_name="resnet152",        # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
+        encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
+        in_channels=3,                  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
+        classes=1,                      # model output channels (number of classes in your dataset)
+    ).to(device)
+    #UNet(args.num_classes).to(device)
 
     if args.model_path and os.path.exists(args.model_path):
         # Load model weights.
@@ -53,7 +62,7 @@ def main(args):
         train_bce, train_dice, train_loss = 0, 0, 0
         # Each epoch has a training. Set model to training mode.
         net.train()
-        for index, (images, masks) in enumerate(train_loader, 1):
+        for index, (images, masks, image_name) in enumerate(train_loader, 1):
             images = images.to(device)
             masks = masks.to(device)
 
@@ -91,14 +100,14 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', default=None, type=str)
     parser.add_argument('--num_classes', default=1, type=int)
     parser.add_argument('--epochs', default=100, type=int)
-    parser.add_argument('--step_size', default=25, type=int)
+    parser.add_argument('--step_size', default=15, type=int)
     parser.add_argument('--batch_size', default=10, type=int)
     parser.add_argument('--lr', default=5e-5, type=float)
-    parser.add_argument('--bce_weight', default=0.5, type=float)
+    parser.add_argument('--bce_weight', default=0.25, type=float)
     args = parser.parse_args()
     print(vars(args))
     
-    if args.model_path:
-        os.makedirs(os.path.dirname(args.model_path), exist_ok=True)
+    #if args.model_path:
+    #    os.makedirs(os.path.dirname(args.model_path), exist_ok=True)
 
     main(args)

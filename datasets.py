@@ -7,9 +7,11 @@ from PIL import Image
 
 class KidneyDataset(Dataset):
     def __init__(self, phase, densenet=False, transform=None):
-        df = pd.read_csv('data/%s_list.txt' % (phase), header=None)
-        self.image_names = ['data/imgs/%s' % (image_name) for image_name in df[0]]
-        self.mask_names = ['data/masks/%s' % (mask_name) for mask_name in df[0]]
+        df = pd.read_csv('%s.csv' % (phase))
+        self.image_names = df['image']
+        self.mask_names = df['masks']
+        #self.image_names = ['data/imgs/%s' % (image_name) for image_name in df[0]]
+        #self.mask_names = ['data/masks/%s' % (mask_name) for mask_name in df[0]]
 
         self.images, self.masks = [], []
         for image_name, mask_name in zip(self.image_names, self.mask_names):
@@ -30,11 +32,12 @@ class KidneyDataset(Dataset):
     def __getitem__(self, index):
         image = self.images[index]
         mask = self.masks[index]
+        image_name = self.image_names[index]
         if self.transform:
             image = self.transform(image)
             mask = self.transform(mask)
 
-        return image, mask
+        return image, mask, image_name
 
 if __name__ == '__main__':
     transform = transforms.Compose([
